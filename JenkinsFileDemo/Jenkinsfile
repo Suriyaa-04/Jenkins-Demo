@@ -1,7 +1,7 @@
-pipeline{
+pipeline {
     agent any
 
-    parameters{
+    parameters {
         string(
             name: 'APP_PORT',
             defaultValue: '3000',
@@ -9,48 +9,61 @@ pipeline{
         )
     }
 
-    environment{
-        IMAGE_NAME='jenkins-demo-app'
+    environment {
+        IMAGE_NAME = 'jenkins-demo-app'
     }
 
-    stages{
-        stage('Checkout'){
-            steps{
+    stages {
+        stage('Checkout') {
+            steps {
                 echo 'Checking out Source Code from Git Repo'
                 checkout scm
             }
         }
-        stage('Check Docker'){
-            steps{
+
+        stage('Check Docker') {
+            steps {
                 bat 'docker --version'
             }
         }
-        stage('Dependencies'){
-            steps{
-                bat 'npm install'
+
+        stage('Dependencies') {
+            steps {
+                dir('JenkinsFileDemo') {
+                    bat 'npm install'
+                }
             }
         }
-        stage('Test APP'){
-            steps{
-                bat 'npm test'
+
+        stage('Test APP') {
+            steps {
+                dir('JenkinsFileDemo') {
+                    bat 'npm test'
+                }
             }
         }
-        stage('Build'){
-            steps{
-                bat 'docker build -t %IMAGE_NAME%:%BUILD_NUMBER% .'
+
+        stage('Build') {
+            steps {
+                dir('JenkinsFileDemo') {
+                    bat 'docker build -t %IMAGE_NAME%:%BUILD_NUMBER% .'
+                }
             }
         }
-        stage('Run Container'){
-            steps{
+
+        stage('Run Container') {
+            steps {
                 bat '''
-                    docker run -d --name node-app-%BUILD_NUMBER% -p %APP_PORT%:3000 %IMAGE_NAME%:%BUILD_NUMBER%
+                    docker rm -f node-app 2>nul & echo old container removed
+                    docker run -d --name node-app -p %APP_PORT%:3000 %IMAGE_NAME%:%BUILD_NUMBER%
                 '''
             }
         }
-        stage('Verify'){
-            steps{
+
+        stage('Verify') {
+            steps {
                 bat '''
-                    echo APP Deployed Sucessfully
+                    echo APP Deployed Successfully
                     echo Open http://localhost:%APP_PORT%
                     docker ps
                 '''
